@@ -416,8 +416,11 @@ Rules:
 - If no text is visible, return: {"raw_text": "", "found_words": []}
 - Never add extra fields. Never wrap in markdown.`;
 
+  // ── PROXY URL — replace PASTE_YOUR_WORKER_URL_HERE after deploying Cloudflare Worker ──
+  const PROXY_URL = 'https://ila-proxy.anh-nguyenvungoc3010.workers.dev/';
+
   try{
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    const resp = await fetch(PROXY_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -439,9 +442,14 @@ Rules:
       throw new Error(`API ${resp.status}: ${err.slice(0,120)}`);
     }
 
+    // Read usage info injected by the worker
+    const scanCount   = resp.headers.get('X-ILA-Scan-Count');
+    const spentSoFar  = resp.headers.get('X-ILA-Estimated-Spend');
+    const creditsLeft = resp.headers.get('X-ILA-Credits-Left');
+    if(scanCount) updateUsageBar(scanCount, spentSoFar, creditsLeft);
+
     const data = await resp.json();
 
-    // Extract text content from response blocks
     let rawText = '';
     if(Array.isArray(data.content)){
       for(const block of data.content){
@@ -451,37 +459,28 @@ Rules:
 
     if(!rawText.trim()) throw new Error('Empty response from AI.');
 
-    // ── Fix 3: Sanitize before parsing ──
-    // Strip markdown code fences if Claude wrapped anyway
     let cleaned = rawText.trim()
       .replace(/^```(?:json)?\s*/i, '')
       .replace(/\s*```$/, '')
       .trim();
 
-    // Find JSON object boundaries robustly
     const start = cleaned.indexOf('{');
     const end   = cleaned.lastIndexOf('}');
     if(start === -1 || end === -1) throw new Error('No JSON found in response.');
     const jsonStr = cleaned.slice(start, end + 1);
 
-    // ── Fix 2: try-catch around parse ──
     let parsed;
     try{ parsed = JSON.parse(jsonStr); }
     catch(e){ throw new Error('Could not parse AI response. Please try again.'); }
 
-    // ── Fix 1: String matching as backup ──
-    // Even if Claude missed some words, re-scan raw_text ourselves
     const extractedText = String(parsed.raw_text || '');
     const apiFound      = Array.isArray(parsed.found_words) ? parsed.found_words.map(w=>w.toLowerCase()) : [];
 
-    // Secondary string scan: find any DICT words in the raw text
     const localFound = DICT
       .filter(entry => new RegExp('\\b'+entry.word+'\\b','i').test(extractedText))
       .map(entry => entry.word);
 
-    // Merge both sources (API + local scan), deduplicate
     const allFound = [...new Set([...apiFound, ...localFound])];
-
     renderResults(extractedText, allFound);
 
   } catch(err){
@@ -490,6 +489,20 @@ Rules:
   }
 
   analyseBtn.disabled = false;
+}
+
+// ── USAGE BAR shown below header after each scan ──
+function updateUsageBar(scans, spent, left){
+  let bar = document.getElementById('usage-bar');
+  if(!bar){
+    bar = document.createElement('div');
+    bar.id = 'usage-bar';
+    bar.style.cssText = 'background:var(--peach-pale);border-bottom:1px solid var(--border);padding:6px 16px;display:flex;align-items:center;justify-content:space-between;font-size:10px;color:var(--ink-mid);letter-spacing:0.04em;';
+    document.querySelector('.app-header').after(bar);
+  }
+  const pct = Math.min(100, Math.round((parseFloat(spent||0) / 5.0) * 100));
+  const color = pct >= 80 ? '#c05050' : pct >= 50 ? '#c07830' : '#2d6b46';
+  bar.innerHTML = '<span>📊 '+scans+' scan'+(scans!=1?'s':'')+' · '+spent+' spent</span><span style="color:'+color+';font-weight:500;">'+left+' left</span>';
 }
 
 // ══════════════════════════════════════════════════════
