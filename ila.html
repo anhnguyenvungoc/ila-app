@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#fdf6f0">
+<title>ILA — Dutch Word Scanner</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+:root{
+  --bg:#fdf6f0;
+  --surface:#ffffff;
+  --rose:#d4849a;--rose-light:#f0cdd6;--rose-pale:#fdf0f3;
+  --sage:#7aab8a;--sage-light:#c8e0d0;--sage-pale:#eef6f1;
+  --peach:#e8a87c;--peach-light:#f8dcc8;--peach-pale:#fef5ef;
+  --lavender:#9b8dc0;--lavender-light:#d8d0ec;--lavender-pale:#f3f0fb;
+  --sky:#7bb5d4;--sky-light:#cce2f0;--sky-pale:#eef6fc;
+  --ink:#2c2320;--ink-mid:#6b5e58;--ink-soft:#a0918a;
+  --border:rgba(44,35,32,0.09);--border-mid:rgba(44,35,32,0.16);
+  --radius-lg:20px;--radius:14px;--radius-sm:10px;--radius-xs:7px;
+  --shadow-sm:0 2px 10px rgba(44,35,32,0.07);
+}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;max-width:480px;margin:0 auto;display:flex;flex-direction:column;overflow-x:hidden;}
+
+/* HEADER */
+.app-header{padding:18px 20px 14px;background:var(--bg);display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:50;}
+.logo{font-family:'Cormorant Garamond',serif;font-size:30px;font-weight:300;letter-spacing:0.22em;color:var(--ink);line-height:1;}
+.logo em{font-style:normal;color:var(--rose);}
+.header-sub{font-size:10px;color:var(--ink-soft);letter-spacing:0.14em;text-transform:uppercase;}
+
+/* NAV */
+.bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:var(--surface);display:flex;border-top:1px solid var(--border);z-index:100;padding-bottom:env(safe-area-inset-bottom,0px);}
+.nav-btn{flex:1;border:none;background:transparent;color:var(--ink-soft);padding:11px 0 13px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;font-family:'DM Sans',sans-serif;font-size:9px;text-transform:uppercase;letter-spacing:0.1em;font-weight:500;transition:color 0.2s;min-height:56px;}
+.nav-btn.active{color:var(--ink);}
+.nav-btn svg{width:20px;height:20px;}
+.nav-pip{width:4px;height:4px;border-radius:50%;background:var(--rose);opacity:0;transition:opacity 0.2s;}
+.nav-btn.active .nav-pip{opacity:1;}
+
+/* SCREENS */
+.screen{display:none;flex:1;padding:18px 16px 92px;flex-direction:column;gap:15px;overflow-y:auto;}
+.screen.active{display:flex;}
+.screen-title{font-family:'Cormorant Garamond',serif;font-size:27px;font-weight:300;letter-spacing:0.06em;color:var(--ink);}
+.section-label{font-size:9px;text-transform:uppercase;letter-spacing:0.16em;color:var(--ink-soft);font-weight:500;margin-bottom:10px;}
+
+/* BUTTONS */
+.btn-primary{background:var(--ink);color:white;border:none;border-radius:var(--radius-sm);padding:14px 20px;font-size:12px;font-weight:500;font-family:'DM Sans',sans-serif;cursor:pointer;width:100%;letter-spacing:0.1em;text-transform:uppercase;transition:opacity 0.2s,transform 0.1s;display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;}
+.btn-primary:hover{opacity:0.85;}
+.btn-primary:active{transform:scale(0.98);}
+.btn-primary:disabled{opacity:0.35;cursor:not-allowed;transform:none;}
+.btn-soft{background:transparent;border:1px solid var(--border-mid);border-radius:var(--radius-xs);padding:7px 14px;font-size:11px;font-weight:500;letter-spacing:0.07em;font-family:'DM Sans',sans-serif;cursor:pointer;color:var(--ink-mid);transition:all 0.15s;display:inline-flex;align-items:center;gap:5px;min-height:36px;}
+.btn-soft:hover{background:var(--bg);border-color:var(--ink);color:var(--ink);}
+.btn-soft.saved{background:var(--sage-pale);border-color:var(--sage);color:#2d6b46;cursor:default;}
+
+/* UPLOAD */
+.upload-zone{background:var(--surface);border:2px dashed var(--border-mid);border-radius:var(--radius-lg);padding:44px 24px;text-align:center;cursor:pointer;transition:border-color 0.2s,background 0.2s;position:relative;overflow:hidden;}
+.upload-zone:hover{border-color:var(--rose);background:var(--rose-pale);}
+.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;font-size:0;}
+.upload-blob{width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--rose-light),var(--peach-light));display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:28px;box-shadow:0 4px 16px rgba(212,132,154,0.25);}
+.upload-title{font-size:15px;font-weight:500;margin-bottom:5px;color:var(--ink);}
+.upload-sub{font-size:12px;color:var(--ink-soft);line-height:1.6;}
+
+/* PREVIEW — object-fit:contain preserves full vertical images */
+.preview-wrap{background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;position:relative;}
+.preview-wrap img{width:100%;max-height:400px;object-fit:contain;display:block;background:#f8f4f0;}
+.preview-clear{position:absolute;top:10px;right:10px;background:rgba(255,255,255,0.92);border:1px solid var(--border-mid);border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;color:var(--ink-mid);}
+
+/* LOADING ANIMATION */
+.ocr-loading{background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);padding:32px 20px;text-align:center;}
+.pulse-blobs{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:18px;}
+.blob{width:14px;height:14px;border-radius:50%;animation:blobPulse 1.4s ease-in-out infinite;}
+.blob:nth-child(1){background:var(--rose);animation-delay:0s;}
+.blob:nth-child(2){background:var(--peach);animation-delay:0.2s;}
+.blob:nth-child(3){background:var(--lavender);animation-delay:0.4s;}
+.blob:nth-child(4){background:var(--sage);animation-delay:0.6s;}
+@keyframes blobPulse{0%,80%,100%{transform:scale(0.7);opacity:0.5;}40%{transform:scale(1.2);opacity:1;}}
+.ocr-loading-text{font-family:'Cormorant Garamond',serif;font-size:19px;font-style:italic;color:var(--ink-mid);}
+
+/* RESULTS */
+.raw-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow-sm);}
+.raw-box{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:13px 15px;font-size:13px;line-height:1.7;color:var(--ink-mid);max-height:140px;overflow-y:auto;white-space:pre-wrap;margin-top:8px;}
+.match-card{background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;box-shadow:var(--shadow-sm);}
+.match-header{padding:14px 16px 10px;display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
+.match-word{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:400;color:var(--ink);line-height:1.1;}
+.match-meaning{font-size:13px;color:var(--ink-mid);margin-top:3px;}
+.match-context{background:var(--peach-pale);border-top:1px solid var(--border);padding:10px 16px;font-size:12px;color:var(--ink-mid);line-height:1.55;font-style:italic;}
+.no-match{background:var(--lavender-pale);border:1px solid var(--lavender-light);border-radius:var(--radius-sm);padding:16px;font-size:13px;color:var(--ink-mid);line-height:1.6;text-align:center;}
+.error-box{background:var(--rose-pale);border:1px solid var(--rose-light);border-radius:var(--radius-sm);padding:14px 16px;font-size:13px;color:#8a3050;line-height:1.5;}
+
+/* VOCAB SCREEN */
+.vocab-top{display:flex;align-items:center;justify-content:space-between;}
+.vocab-badge{background:var(--rose-light);color:#8a3050;border-radius:20px;padding:4px 13px;font-size:11px;font-weight:500;}
+.vocab-list{display:flex;flex-direction:column;gap:10px;}
+.vocab-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;display:flex;align-items:center;gap:14px;box-shadow:var(--shadow-sm);}
+.vocab-dot{width:38px;height:38px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;font-family:'Cormorant Garamond',serif;}
+.vocab-body{flex:1;min-width:0;}
+.vocab-dutch{font-weight:500;font-size:15px;color:var(--ink);}
+.vocab-en{font-size:12px;color:var(--ink-mid);margin-top:2px;}
+.vocab-ctx{font-size:11px;color:var(--ink-soft);margin-top:2px;font-style:italic;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.vocab-del{background:none;border:none;color:var(--border-mid);cursor:pointer;font-size:16px;padding:4px;min-width:32px;min-height:32px;display:flex;align-items:center;justify-content:center;transition:color 0.15s;}
+.vocab-del:hover{color:var(--rose);}
+.empty-state{text-align:center;padding:52px 20px;}
+.empty-blob{width:76px;height:76px;border-radius:50%;background:linear-gradient(135deg,var(--rose-light),var(--peach-light));display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:30px;}
+.empty-state p{font-size:13px;color:var(--ink-soft);line-height:1.7;}
+
+/* STUDY SCREEN */
+.study-top{display:flex;align-items:center;justify-content:space-between;}
+.study-score{background:var(--sage-pale);color:#2d6b46;border-radius:20px;padding:4px 13px;font-size:11px;font-weight:500;}
+.progress-track{height:3px;background:var(--border);border-radius:2px;}
+.progress-fill{height:100%;background:var(--rose);border-radius:2px;transition:width 0.4s ease;}
+.mode-tabs{display:flex;gap:7px;}
+.mode-tab{flex:1;background:var(--surface);border:1px solid var(--border-mid);border-radius:var(--radius-sm);padding:9px 6px;font-size:10px;text-align:center;cursor:pointer;text-transform:uppercase;letter-spacing:0.09em;font-weight:500;color:var(--ink-mid);font-family:'DM Sans',sans-serif;transition:all 0.15s;min-height:44px;display:flex;align-items:center;justify-content:center;}
+.mode-tab.active{background:var(--ink);color:white;border-color:var(--ink);}
+
+/* FLASHCARD */
+.fc-scene{perspective:1200px;cursor:pointer;}
+.fc-card{min-height:280px;border-radius:var(--radius-lg);transform-style:preserve-3d;transition:transform 0.55s cubic-bezier(0.4,0,0.2,1);position:relative;}
+.fc-card.flipped{transform:rotateY(180deg);}
+.fc-face{position:absolute;inset:0;min-height:280px;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:var(--radius-lg);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px 26px;text-align:center;border:1px solid var(--border);}
+.fc-front{background:linear-gradient(150deg,#fce8ef 0%,#fde8d4 100%);}
+.fc-back{background:var(--surface);transform:rotateY(180deg);}
+.fc-label{font-size:9px;text-transform:uppercase;letter-spacing:0.15em;color:var(--ink-soft);margin-bottom:14px;}
+.fc-dutch{font-family:'Cormorant Garamond',serif;font-size:50px;font-weight:300;letter-spacing:0.03em;color:var(--ink);line-height:1;}
+.fc-hint{font-size:11px;color:var(--ink-soft);margin-top:14px;}
+.fc-english{font-family:'Cormorant Garamond',serif;font-size:34px;font-weight:400;color:var(--ink);line-height:1.2;margin-bottom:8px;}
+.fc-context{font-size:12px;color:var(--ink-soft);font-style:italic;line-height:1.55;max-width:260px;}
+.fc-actions{display:flex;gap:9px;margin-top:2px;}
+.fc-btn{flex:1;border-radius:var(--radius-sm);padding:13px 10px;font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.15s;min-height:48px;border:1px solid;}
+.fc-btn.wrong{border-color:var(--rose);color:#8a3050;background:var(--rose-pale);}
+.fc-btn.right{border-color:var(--sage);color:#2d6b46;background:var(--sage-pale);}
+
+/* MULTIPLE CHOICE */
+.mc-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:28px 22px;box-shadow:var(--shadow-sm);}
+.mc-prompt{font-size:9px;text-transform:uppercase;letter-spacing:0.15em;color:var(--ink-soft);margin-bottom:8px;}
+.mc-word{font-family:'Cormorant Garamond',serif;font-size:44px;font-weight:300;color:var(--ink);margin-bottom:22px;line-height:1.05;}
+.mc-opts{display:flex;flex-direction:column;gap:9px;}
+.mc-opt{border:1px solid var(--border-mid);border-radius:var(--radius-sm);padding:14px 16px;cursor:pointer;font-size:14px;background:var(--surface);font-family:'DM Sans',sans-serif;text-align:left;transition:all 0.15s;color:var(--ink);min-height:50px;}
+.mc-opt:hover:not(:disabled){border-color:var(--rose);background:var(--rose-pale);}
+.mc-opt.correct{border-color:var(--sage);background:var(--sage-pale);color:#2d6b46;font-weight:500;}
+.mc-opt.wrong{border-color:var(--rose);background:var(--rose-pale);color:#8a3050;}
+.mc-opt:disabled{cursor:default;}
+
+/* FILL IN THE BLANK */
+.fib-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:28px 22px;text-align:center;box-shadow:var(--shadow-sm);}
+.fib-label{font-size:9px;text-transform:uppercase;letter-spacing:0.15em;color:var(--ink-soft);margin-bottom:14px;}
+.fib-sentence{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:400;color:var(--ink);margin-bottom:6px;line-height:1.6;}
+.fib-blank{display:inline-block;min-width:90px;border-bottom:2px solid var(--rose);color:transparent;margin:0 3px;}
+.fib-translation{font-size:12px;color:var(--ink-soft);font-style:italic;margin-bottom:20px;line-height:1.5;}
+.fib-opts{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:8px;}
+.fib-opt{border:1px solid var(--border-mid);border-radius:24px;padding:10px 20px;cursor:pointer;font-size:15px;font-weight:500;background:var(--surface);font-family:'Cormorant Garamond',serif;color:var(--ink);transition:all 0.15s;min-height:44px;display:flex;align-items:center;}
+.fib-opt:hover:not(:disabled){border-color:var(--rose);background:var(--rose-pale);}
+.fib-opt.correct{border-color:var(--sage);background:var(--sage-pale);color:#2d6b46;}
+.fib-opt.wrong{border-color:var(--rose);background:var(--rose-pale);color:#8a3050;}
+.fib-opt:disabled{cursor:default;}
+.fib-feedback{font-size:13px;font-weight:500;min-height:20px;margin-top:4px;}
+.fib-feedback.correct{color:#2d6b46;}
+.fib-feedback.wrong{color:#8a3050;}
+
+/* SESSION COMPLETE */
+.session-complete{border-radius:var(--radius-lg);padding:38px 26px;text-align:center;background:linear-gradient(150deg,#fce8ef 0%,#ede8f7 50%,#d8f0e4 100%);border:1px solid var(--border);}
+.session-emoji{font-size:48px;margin-bottom:10px;}
+.session-title{font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:300;color:var(--ink);margin-bottom:4px;}
+.session-pct{font-size:56px;font-weight:300;color:var(--ink);margin:6px 0;}
+.session-sub{font-size:13px;color:var(--ink-mid);margin-bottom:24px;}
+.session-restart{background:var(--ink);color:white;border:none;border-radius:var(--radius-sm);padding:13px 30px;font-size:11px;font-family:'DM Sans',sans-serif;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;transition:opacity 0.15s;}
+.session-restart:hover{opacity:0.82;}
+.no-words-state{text-align:center;padding:48px 20px;}
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="logo">I<em>L</em>A</div>
+  <div class="header-sub">Dutch Word Scanner</div>
+</header>
+
+<!-- CAPTURE SCREEN -->
+<section id="screen-capture" class="screen active">
+  <div id="upload-zone" class="upload-zone">
+    <input type="file" id="file-input" accept="image/*" capture="environment">
+    <div class="upload-blob">📸</div>
+    <div class="upload-title">Scan a Dutch poster or ad</div>
+    <div class="upload-sub">Tap to use your camera<br>or choose from your gallery</div>
+  </div>
+  <div id="preview-wrap" class="preview-wrap" style="display:none;">
+    <img id="preview-img" src="" alt="Captured">
+    <button class="preview-clear" id="clear-btn">✕</button>
+  </div>
+  <button class="btn-primary" id="analyse-btn" disabled>
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    Analyse this image
+  </button>
+  <div id="result-area"></div>
+</section>
+
+<!-- VOCAB SCREEN -->
+<section id="screen-vocab" class="screen">
+  <div class="vocab-top">
+    <div class="screen-title">My Vocab</div>
+    <div class="vocab-badge" id="vocab-count">0 words</div>
+  </div>
+  <div id="vocab-list"></div>
+</section>
+
+<!-- STUDY SCREEN -->
+<section id="screen-study" class="screen">
+  <div class="study-top">
+    <div class="screen-title">Study</div>
+    <div class="study-score" id="study-score">0 / 0</div>
+  </div>
+  <div class="progress-track">
+    <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+  </div>
+  <div class="mode-tabs">
+    <div class="mode-tab active" data-mode="flashcard">Flashcard</div>
+    <div class="mode-tab" data-mode="choice">Choice</div>
+    <div class="mode-tab" data-mode="fillin">Fill in</div>
+  </div>
+  <div id="study-area"></div>
+</section>
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav">
+  <button class="nav-btn active" data-screen="capture">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+    <div class="nav-pip"></div>Capture
+  </button>
+  <button class="nav-btn" data-screen="vocab">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+    <div class="nav-pip"></div>My Vocab
+  </button>
+  <button class="nav-btn" data-screen="study">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+    <div class="nav-pip"></div>Study
+  </button>
+</nav>
+
+<script>
+// ══════════════════════════════════════════════════════
+// DUTCH MARKETING DICTIONARY
+// Hardcoded target words — scanned via string matching
+// ══════════════════════════════════════════════════════
+const DICT = [
+  { word:'actie',      display:'Actie',      meaning:'Promotion / Deal',        context:'Standard Dutch sale indicator. "In de actie" means "on sale."' },
+  { word:'gratis',     display:'Gratis',     meaning:'Free',                    context:'"1+1 Gratis" = buy one get one free. Very common in supermarkets.' },
+  { word:'voor',       display:'Voor',       meaning:'For (pricing)',            context:'"2 voor €5" means "2 for €5." Signals a bundle price deal.' },
+  { word:'week',       display:'Week',       meaning:'Week',                     context:'"Aanbieding van de week" = deal of the week. Weekly urgency signal.' },
+  { word:'korting',    display:'Korting',    meaning:'Discount',                 context:'"50% korting" = 50% off. The core Dutch word for any price reduction.' },
+  { word:'aanbieding', display:'Aanbieding', meaning:'Offer / Special deal',     context:'"Speciale aanbieding" = special offer. Extremely common on flyers.' },
+  { word:'nu',         display:'Nu',         meaning:'Now',                      context:'Creates urgency — "Nu €2.99" = Now €2.99. Paired with reduced price.' },
+  { word:'nieuw',      display:'Nieuw',      meaning:'New',                      context:'"Nieuw in onze winkel" = new in our store. Signals a product launch.' },
+  { word:'goedkoop',   display:'Goedkoop',   meaning:'Cheap / Affordable',       context:'Direct value claim. More colloquial and stronger than "korting."' },
+  { word:'tijdelijk',  display:'Tijdelijk',  meaning:'Temporary / Limited time', context:'"Tijdelijk lager geprijsd" = temporarily reduced. Classic supermarket phrasing.' },
+  { word:'extra',      display:'Extra',      meaning:'Extra / Additional',        context:'"Extra voordeel" = extra benefit. Used to amplify deal messaging.' },
+  { word:'prijs',      display:'Prijs',      meaning:'Price',                    context:'"Beste prijs" = best price. Core pricing vocabulary.' },
+  { word:'sale',       display:'Sale',       meaning:'Sale (seasonal)',           context:'English loanword used directly in Dutch retail for seasonal sales.' },
+  { word:'winkel',     display:'Winkel',     meaning:'Shop / Store',             context:'"In onze winkel" = in our store. Retail location reference.' },
+  { word:'kopen',      display:'Kopen',      meaning:'To buy',                   context:'"Nu kopen" = buy now. Strong call-to-action verb in Dutch ads.' },
+  { word:'geldig',     display:'Geldig',     meaning:'Valid',                    context:'"Geldig t/m zondag" = valid until Sunday. Sets the deal deadline.' },
+  { word:'voordeel',   display:'Voordeel',   meaning:'Advantage / Benefit',      context:'"Extra voordeel" or "groot voordeel" = big saving. Key value word.' },
+  { word:'spaar',      display:'Spaar',      meaning:'Save / Collect',           context:'"Spaar punten" = collect points. Loyalty programme language.' },
+];
+
+const DOT_PALETTES = [
+  {bg:'#f0cdd6',txt:'#8a3050'},{bg:'#c8e0d0',txt:'#2d6b46'},
+  {bg:'#f8dcc8',txt:'#8a4820'},{bg:'#d8d0ec',txt:'#4a3880'},
+  {bg:'#cce2f0',txt:'#1e5878'},
+];
+
+const FILL_TEMPLATES = [
+  { nl:'Dit product is in de ____.', en:'This product is on ____.' },
+  { nl:'Kijk, ____ bij de kassa!',   en:'Look, ____ at the checkout!' },
+  { nl:'Van €5 naar €3 — dat is ____.', en:'From €5 to €3, that\'s ____.' },
+  { nl:'Alleen deze week: ____.', en:'This week only: ____.' },
+  { nl:'Dit is de beste ____ van de maand.', en:'This is the best ____ of the month.' },
+];
+
+// ══════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════
+let vocab = [];
+let studyMode='flashcard', studyQueue=[], studyIdx=0, studyCorrect=0, fcFlipped=false;
+let currentB64=null, currentMime=null;
+
+// ══════════════════════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════════════════════
+const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const shuffle = a => { const b=[...a]; for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]];} return b; };
+const dotPal = i => DOT_PALETTES[i % DOT_PALETTES.length];
+
+// ══════════════════════════════════════════════════════
+// STORAGE — localStorage
+// ══════════════════════════════════════════════════════
+function persist(){ try{ localStorage.setItem('ila_vocab_v3', JSON.stringify(vocab)); }catch(e){} }
+function loadStorage(){
+  try{ const r=localStorage.getItem('ila_vocab_v3'); if(r) vocab=JSON.parse(r); }catch(e){ vocab=[]; }
+}
+
+// Seed Actie, Gratis, Korting on first launch so Study is immediately usable
+function seedMock(){
+  const has = new Set(vocab.map(v=>v.word));
+  ['actie','gratis','korting'].forEach(w=>{
+    if(!has.has(w)){ const e=DICT.find(d=>d.word===w); if(e) pushVocab(e,false); }
+  });
+}
+
+// ══════════════════════════════════════════════════════
+// NAV
+// ══════════════════════════════════════════════════════
+document.querySelectorAll('.nav-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('screen-'+btn.dataset.screen).classList.add('active');
+    if(btn.dataset.screen==='vocab') renderVocab();
+    if(btn.dataset.screen==='study') initStudy();
+  });
+});
+
+// ══════════════════════════════════════════════════════
+// CAPTURE — file input
+// ══════════════════════════════════════════════════════
+const fileInput   = document.getElementById('file-input');
+const previewWrap = document.getElementById('preview-wrap');
+const previewImg  = document.getElementById('preview-img');
+const uploadZone  = document.getElementById('upload-zone');
+const analyseBtn  = document.getElementById('analyse-btn');
+const resultArea  = document.getElementById('result-area');
+
+fileInput.addEventListener('change', e => {
+  const file = e.target.files[0];
+  if(!file) return;
+
+  // Read as base64 for Claude API
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const dataUrl = ev.target.result;
+    const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+    if(!match){ showError('Could not read image file.'); return; }
+    currentMime = match[1];
+    currentB64  = match[2];
+    // Preview — object-fit:contain shows full tall images
+    previewImg.src = dataUrl;
+    previewWrap.style.display = 'block';
+    uploadZone.style.display  = 'none';
+    analyseBtn.disabled = false;
+    resultArea.innerHTML = '';
+  };
+  reader.onerror = () => showError('Failed to read the image file.');
+  reader.readAsDataURL(file);
+});
+
+document.getElementById('clear-btn').addEventListener('click', () => {
+  currentB64 = null; currentMime = null;
+  previewImg.src = '';
+  previewWrap.style.display = 'none';
+  uploadZone.style.display  = 'block';
+  analyseBtn.disabled = true;
+  resultArea.innerHTML = '';
+  fileInput.value = '';
+});
+
+analyseBtn.addEventListener('click', analyseImage);
+
+function showError(msg){
+  resultArea.innerHTML = `<div class="error-box">⚠️ ${esc(msg)}</div>`;
+}
+
+// ══════════════════════════════════════════════════════
+// CLAUDE API — Vision OCR
+//
+// Uses the Anthropic /v1/messages endpoint with vision.
+// Sends the image as base64 and asks Claude to:
+//   1. Extract all visible Dutch text (raw OCR role)
+//   2. Return a JSON list of found dictionary words
+//
+// NO Tesseract / No Web Workers — fully compatible with
+// this sandbox environment.
+// ══════════════════════════════════════════════════════
+async function analyseImage(){
+  if(!currentB64 || !currentMime){ showError('No image loaded.'); return; }
+  analyseBtn.disabled = true;
+
+  resultArea.innerHTML = `
+    <div class="ocr-loading">
+      <div class="pulse-blobs">
+        <div class="blob"></div><div class="blob"></div>
+        <div class="blob"></div><div class="blob"></div>
+      </div>
+      <div class="ocr-loading-text">ILA is analyzing the text…</div>
+    </div>`;
+
+  // Build the word list for the prompt so Claude knows exactly what to look for
+  const dictList = DICT.map(d => d.word).join(', ');
+
+  const systemPrompt = `You are a Dutch text extraction assistant embedded in a language-learning app called ILA.
+
+Your job:
+1. Read all visible text in the image (act as an OCR engine for Dutch).
+2. Check which of these specific Dutch marketing words appear in the text: ${dictList}
+3. Return ONLY a raw JSON object — no markdown, no backticks, no explanation.
+
+JSON structure:
+{
+  "raw_text": "all the Dutch text you can see in the image, exactly as written",
+  "found_words": ["word1", "word2"]
+}
+
+Rules:
+- "raw_text" must be the verbatim text from the image (or empty string if none).
+- "found_words" must be an array of matching words from the provided list only (lowercase).
+- If no text is visible, return: {"raw_text": "", "found_words": []}
+- Never add extra fields. Never wrap in markdown.`;
+
+  try{
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 800,
+        system: systemPrompt,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: currentMime, data: currentB64 } },
+            { type: 'text',  text: 'Extract the Dutch text and identify any matching words. Respond with raw JSON only.' }
+          ]
+        }]
+      })
+    });
+
+    if(!resp.ok){
+      const err = await resp.text();
+      throw new Error(`API ${resp.status}: ${err.slice(0,120)}`);
+    }
+
+    const data = await resp.json();
+
+    // Extract text content from response blocks
+    let rawText = '';
+    if(Array.isArray(data.content)){
+      for(const block of data.content){
+        if(block.type === 'text') rawText += block.text;
+      }
+    }
+
+    if(!rawText.trim()) throw new Error('Empty response from AI.');
+
+    // ── Fix 3: Sanitize before parsing ──
+    // Strip markdown code fences if Claude wrapped anyway
+    let cleaned = rawText.trim()
+      .replace(/^```(?:json)?\s*/i, '')
+      .replace(/\s*```$/, '')
+      .trim();
+
+    // Find JSON object boundaries robustly
+    const start = cleaned.indexOf('{');
+    const end   = cleaned.lastIndexOf('}');
+    if(start === -1 || end === -1) throw new Error('No JSON found in response.');
+    const jsonStr = cleaned.slice(start, end + 1);
+
+    // ── Fix 2: try-catch around parse ──
+    let parsed;
+    try{ parsed = JSON.parse(jsonStr); }
+    catch(e){ throw new Error('Could not parse AI response. Please try again.'); }
+
+    // ── Fix 1: String matching as backup ──
+    // Even if Claude missed some words, re-scan raw_text ourselves
+    const extractedText = String(parsed.raw_text || '');
+    const apiFound      = Array.isArray(parsed.found_words) ? parsed.found_words.map(w=>w.toLowerCase()) : [];
+
+    // Secondary string scan: find any DICT words in the raw text
+    const localFound = DICT
+      .filter(entry => new RegExp('\\b'+entry.word+'\\b','i').test(extractedText))
+      .map(entry => entry.word);
+
+    // Merge both sources (API + local scan), deduplicate
+    const allFound = [...new Set([...apiFound, ...localFound])];
+
+    renderResults(extractedText, allFound);
+
+  } catch(err){
+    showError(err.message);
+    console.error('Analyse error:', err);
+  }
+
+  analyseBtn.disabled = false;
+}
+
+// ══════════════════════════════════════════════════════
+// RENDER RESULTS
+// ══════════════════════════════════════════════════════
+function renderResults(rawText, foundWords){
+  const savedSet = new Set(vocab.map(v=>v.word));
+  let html = '';
+
+  // Raw text review box
+  html += `<div class="raw-card">
+    <div class="section-label">Extracted Dutch text</div>
+    <div class="raw-box">${esc(rawText || '(No text detected in this image)')}</div>
+  </div>`;
+
+  // Match the found words against our dictionary
+  const matches = foundWords
+    .map(w => DICT.find(d => d.word === w.toLowerCase()))
+    .filter(Boolean);
+
+  if(matches.length === 0){
+    html += `<div class="no-match">
+      💜 Text captured, but no specific Dutch marketing words were found.<br><br>
+      Try a clearer photo of a Dutch supermarket flyer, street sign, or poster!
+    </div>`;
+  } else {
+    html += `<div class="section-label" style="padding:0 2px;">
+      Found ${matches.length} word${matches.length!==1?'s':''} — tap + Save to add to your vocab
+    </div>`;
+
+    matches.forEach(entry => {
+      const saved = savedSet.has(entry.word);
+      html += `<div class="match-card">
+        <div class="match-header">
+          <div>
+            <div class="match-word">${esc(entry.display)}</div>
+            <div class="match-meaning">${esc(entry.meaning)}</div>
+          </div>
+          <button class="btn-soft${saved?' saved':''}"
+            id="sb-${entry.word}"
+            onclick="handleSave('${entry.word}')"
+            ${saved?'disabled':''}>
+            ${saved ? '✓ Saved' : '+ Save'}
+          </button>
+        </div>
+        <div class="match-context">${esc(entry.context)}</div>
+      </div>`;
+    });
+  }
+
+  resultArea.innerHTML = html;
+}
+
+// ══════════════════════════════════════════════════════
+// VOCAB MANAGEMENT
+// ══════════════════════════════════════════════════════
+function handleSave(word){
+  const entry = DICT.find(d=>d.word===word);
+  if(!entry) return;
+  pushVocab(entry, true);
+  const btn = document.getElementById('sb-'+word);
+  if(btn){ btn.textContent='✓ Saved'; btn.classList.add('saved'); btn.disabled=true; }
+}
+
+function pushVocab(entry, save=true){
+  if(vocab.find(v=>v.word===entry.word)) return;
+  vocab.push({ id:Date.now()+Math.random(), word:entry.word, display:entry.display, meaning:entry.meaning, context:entry.context });
+  if(save) persist();
+  updateBadge();
+}
+
+function deleteWord(id){
+  vocab = vocab.filter(v=>v.id!==id);
+  persist(); renderVocab();
+}
+
+function updateBadge(){
+  const el=document.getElementById('vocab-count');
+  if(el) el.textContent = vocab.length+' word'+(vocab.length!==1?'s':'');
+}
+
+function renderVocab(){
+  updateBadge();
+  const list = document.getElementById('vocab-list');
+  if(vocab.length===0){
+    list.innerHTML=`<div class="empty-state"><div class="empty-blob">📚</div><p>No words saved yet.<br>Scan a Dutch ad on the Capture tab<br>to start building your vocab!</p></div>`;
+    return;
+  }
+  list.innerHTML = `<div class="vocab-list">` + vocab.map((v,i)=>{
+    const d=dotPal(i);
+    return `<div class="vocab-item">
+      <div class="vocab-dot" style="background:${d.bg};color:${d.txt};">${esc(v.display[0])}</div>
+      <div class="vocab-body">
+        <div class="vocab-dutch">${esc(v.display)}</div>
+        <div class="vocab-en">${esc(v.meaning)}</div>
+        <div class="vocab-ctx">${esc(v.context.split('.')[0]+'.')}</div>
+      </div>
+      <button class="vocab-del" onclick="deleteWord(${v.id})">✕</button>
+    </div>`;
+  }).join('') + `</div>`;
+}
+
+// ══════════════════════════════════════════════════════
+// STUDY SUITE
+// ══════════════════════════════════════════════════════
+document.querySelectorAll('.mode-tab').forEach(tab=>{
+  tab.addEventListener('click',()=>{
+    document.querySelectorAll('.mode-tab').forEach(t=>t.classList.remove('active'));
+    tab.classList.add('active');
+    studyMode = tab.dataset.mode;
+    initStudy();
+  });
+});
+
+function initStudy(){
+  if(vocab.length===0){
+    document.getElementById('study-area').innerHTML=`
+      <div class="no-words-state">
+        <div class="empty-blob" style="margin:0 auto 16px;">🎯</div>
+        <p style="font-size:13px;color:var(--ink-soft);line-height:1.7;">Save words from the Capture tab<br>first, then come back to study!</p>
+      </div>`;
+    return;
+  }
+  studyQueue   = shuffle([...vocab]);
+  studyIdx     = 0;
+  studyCorrect = 0;
+  fcFlipped    = false;
+  updateProgress();
+  renderStudyCard();
+}
+
+function updateProgress(){
+  const total=studyQueue.length;
+  const pct=total?Math.round(studyIdx/total*100):0;
+  document.getElementById('progress-fill').style.width=pct+'%';
+  document.getElementById('study-score').textContent=studyCorrect+' / '+studyIdx;
+}
+
+function renderStudyCard(){
+  if(studyIdx>=studyQueue.length){ renderComplete(); return; }
+  const w=studyQueue[studyIdx];
+  if(studyMode==='flashcard') renderFC(w);
+  else if(studyMode==='choice') renderMC(w);
+  else renderFIB(w);
+}
+
+// ── Flashcard ──
+function renderFC(w){
+  fcFlipped=false;
+  document.getElementById('study-area').innerHTML=`
+    <div class="fc-scene" onclick="flipCard()">
+      <div class="fc-card" id="fc">
+        <div class="fc-face fc-front">
+          <div class="fc-label">What does this mean?</div>
+          <div class="fc-dutch">${esc(w.display)}</div>
+          <div class="fc-hint">Tap to reveal ↓</div>
+        </div>
+        <div class="fc-face fc-back">
+          <div class="fc-label">English</div>
+          <div class="fc-english">${esc(w.meaning)}</div>
+          <div class="fc-context">${esc(w.context)}</div>
+        </div>
+      </div>
+    </div>
+    <div class="fc-actions" id="fc-actions" style="display:none;">
+      <button class="fc-btn wrong" onclick="markFC(false)">✗ Missed it</button>
+      <button class="fc-btn right"  onclick="markFC(true)">✓ Got it</button>
+    </div>`;
+}
+function flipCard(){
+  const fc=document.getElementById('fc'); if(!fc) return;
+  fcFlipped=!fcFlipped; fc.classList.toggle('flipped',fcFlipped);
+  if(fcFlipped) document.getElementById('fc-actions').style.display='flex';
+}
+function markFC(ok){ if(ok) studyCorrect++; studyIdx++; updateProgress(); renderStudyCard(); }
+
+// ── Multiple Choice ──
+function renderMC(w){
+  const opts=shuffle([w.meaning,...shuffle(vocab.filter(v=>v.id!==w.id)).slice(0,3).map(v=>v.meaning)]);
+  document.getElementById('study-area').innerHTML=`
+    <div class="mc-card">
+      <div class="mc-prompt">What does this mean?</div>
+      <div class="mc-word">${esc(w.display)}</div>
+      <div class="mc-opts">${opts.map(o=>`
+        <button class="mc-opt" onclick="checkMC(this,${JSON.stringify(o)},${JSON.stringify(w.meaning)})">${esc(o)}</button>`).join('')}
+      </div>
+    </div>`;
+}
+function checkMC(btn,chosen,correct){
+  document.querySelectorAll('.mc-opt').forEach(b=>b.disabled=true);
+  if(chosen===correct){ btn.classList.add('correct'); studyCorrect++; }
+  else{
+    btn.classList.add('wrong');
+    document.querySelectorAll('.mc-opt').forEach(b=>{ if(b.textContent.trim()===correct) b.classList.add('correct'); });
+  }
+  studyIdx++; updateProgress(); setTimeout(renderStudyCard,1300);
+}
+
+// ── Fill in the Blank ──
+function renderFIB(w){
+  const tmpl=FILL_TEMPLATES[studyIdx%FILL_TEMPLATES.length];
+  const opts=shuffle([w.display,...shuffle(vocab.filter(v=>v.id!==w.id)).slice(0,3).map(v=>v.display)]);
+  document.getElementById('study-area').innerHTML=`
+    <div class="fib-card">
+      <div class="fib-label">Fill in the blank</div>
+      <div class="fib-sentence">${esc(tmpl.nl).replace('____','<span class="fib-blank">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>')}</div>
+      <div class="fib-translation">"${esc(tmpl.en.replace('____','…'))}"</div>
+      <div class="fib-opts">${opts.map(o=>`
+        <button class="fib-opt" onclick="checkFIB(this,${JSON.stringify(o)},${JSON.stringify(w.display)})">${esc(o)}</button>`).join('')}
+      </div>
+      <div class="fib-feedback" id="fib-fb"></div>
+    </div>`;
+}
+function checkFIB(btn,chosen,correct){
+  document.querySelectorAll('.fib-opt').forEach(b=>b.disabled=true);
+  const fb=document.getElementById('fib-fb');
+  if(chosen===correct){
+    btn.classList.add('correct');
+    if(fb){fb.textContent='✓ Correct!';fb.className='fib-feedback correct';}
+    studyCorrect++;
+  } else {
+    btn.classList.add('wrong');
+    document.querySelectorAll('.fib-opt').forEach(b=>{ if(b.textContent.trim()===correct) b.classList.add('correct'); });
+    if(fb){fb.textContent='✗ The answer was: '+correct;fb.className='fib-feedback wrong';}
+  }
+  studyIdx++; updateProgress(); setTimeout(renderStudyCard,1500);
+}
+
+// ── Session complete ──
+function renderComplete(){
+  const total=studyQueue.length;
+  const pct=total?Math.round(studyCorrect/total*100):0;
+  const emoji=pct>=80?'🌸':pct>=50?'✨':'💪';
+  document.getElementById('study-area').innerHTML=`
+    <div class="session-complete">
+      <div class="session-emoji">${emoji}</div>
+      <div class="session-title">Session done!</div>
+      <div class="session-pct">${pct}%</div>
+      <div class="session-sub">${studyCorrect} of ${total} words correct</div>
+      <button class="session-restart" onclick="initStudy()">Study again</button>
+    </div>`;
+}
+
+// ══════════════════════════════════════════════════════
+// BOOT
+// ══════════════════════════════════════════════════════
+(function boot(){
+  loadStorage();
+  seedMock();
+  persist();
+  renderVocab();
+})();
+</script>
+</body>
+</html>
